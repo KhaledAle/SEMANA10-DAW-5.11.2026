@@ -1,56 +1,96 @@
-# API RESTful de Productos - Laboratorio Semana 10
+# API RESTful de Productos - Práctica Semana 10
 
-API backend construida con Node.js, Express y MySQL (`mysql2/promise`). Organiza el acceso a datos con controladores y rutas, usa un pool de conexiones y consultas preparadas.
+Backend para administrar productos mediante una API REST. Está desarrollado con Node.js y Express, organizado en rutas y controladores, y utiliza MySQL mediante `mysql2/promise` y un pool de conexiones.
 
-## Requisitos
+## Tecnologías y características
 
-- Node.js LTS (20 o superior) y npm.
-- MySQL activo, por ejemplo mediante XAMPP o Laragon.
-- phpMyAdmin u otro cliente MySQL para crear la base de datos.
-- Postman, Insomnia o Thunder Client para las pruebas HTTP.
+- Node.js, Express, `cors` y `dotenv`.
+- MySQL con `mysql2/promise`, consultas asíncronas y pool de conexiones.
+- Operaciones CRUD para productos: listar, consultar, crear, actualizar y eliminar.
+- Consultas preparadas para los valores enviados a MySQL.
+- Validación de datos y respuestas JSON con códigos HTTP apropiados.
+- Manejo de errores sin exponer detalles internos en las respuestas.
 
-## Puesta en marcha
+## Estructura del proyecto
 
-1. Abre una terminal en la carpeta de este proyecto.
-2. Instala las dependencias:
+```text
+├── src/
+│   ├── config/
+│   │   └── db.js
+│   ├── controllers/
+│   │   └── productosController.js
+│   ├── routes/
+│   │   └── productosRoutes.js
+│   └── app.js
+├── test/
+│   └── productos.test.js
+├── .env.example
+├── .gitignore
+├── database.sql
+├── package.json
+└── README.md
+```
+
+`.env` contiene la configuración local de la conexión y está excluido del repositorio mediante `.gitignore`.
+
+## Base de datos
+
+La aplicación utiliza la base de datos `db_lab10` y la tabla `productos`. El esquema y los tres registros iniciales están definidos en `database.sql`.
+
+| Columna | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `id` | `INT`, autoincremental | Identificador principal |
+| `nombre` | `VARCHAR(100)` | Nombre obligatorio |
+| `descripcion` | `VARCHAR(255)` | Descripción opcional |
+| `precio` | `DECIMAL(10, 2)` | Precio obligatorio |
+| `stock` | `INT` | Unidades disponibles; por defecto `0` |
+| `creado_en` | `TIMESTAMP` | Fecha y hora de creación |
+
+## Ejecución con XAMPP
+
+Se requiere Node.js 20 o superior y XAMPP con MySQL habilitado.
+
+1. Inicia los servicios **Apache** y **MySQL** desde el panel de XAMPP. Apache se utiliza para acceder a phpMyAdmin; la API Node.js no se ejecuta en Apache.
+2. En phpMyAdmin (`http://localhost/phpmyadmin`), importa `database.sql`. El script crea `db_lab10`, la tabla `productos` y los registros iniciales.
+3. En la raíz del proyecto, crea `.env` con la configuración de tu MySQL local. Para una instalación XAMPP predeterminada:
+
+   ```env
+   PORT=3000
+   DB_HOST=localhost
+   DB_USER=root
+   DB_PASSWORD=
+   DB_NAME=db_lab10
+   DB_PORT=3306
+   ```
+
+   Si configuraste una contraseña para MySQL o usas otro puerto, coloca esos valores en `.env`.
+
+4. En una terminal abierta en la carpeta del proyecto, instala las dependencias e inicia el servidor:
 
    ```bash
    npm install
-   ```
-
-3. (Opcional) Ejecuta las pruebas automatizadas:
-
-   ```bash
-   npm test
-   ```
-
-4. Crea la base de datos y la tabla. En phpMyAdmin, selecciona **Importar**, elige el archivo `database.sql` de este proyecto y ejecuta la importación. También puedes abrir `database.sql`, copiar su contenido y ejecutarlo en la pestaña **SQL**. Este paso lo debes realizar tú con tu instalación de MySQL.
-5. Crea un archivo `.env` en la raíz copiando `.env.example`. Ajusta `DB_HOST`, `DB_USER`, `DB_PASSWORD` y `DB_PORT` según tu instalación; no compartas ni subas este archivo.
-6. Inicia el servidor:
-
-   ```bash
    npm run dev
    ```
 
-   Alternativamente, para iniciar sin reinicio automático:
+   Para iniciar sin reinicio automático al modificar archivos:
 
    ```bash
    npm start
    ```
 
-El servidor escucha en `http://localhost:3000` por defecto. Si cambias `PORT` en `.env`, utiliza ese puerto en las solicitudes.
+El servidor queda disponible en `http://localhost:3000` (o en el puerto establecido mediante `PORT`). La raíz `/` no es una página web; las solicitudes de la API comienzan en `/api/productos`.
 
 ## Endpoints
 
-| Método | Endpoint | Propósito | Respuestas |
+| Método | Endpoint | Descripción | Respuestas principales |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/productos` | Lista todos los productos. | `200`, `500` |
-| `GET` | `/api/productos/:id` | Obtiene un producto por ID. | `200`, `400`, `404`, `500` |
-| `POST` | `/api/productos` | Crea un producto. Requiere `nombre`, `precio` y `stock`; `descripcion` es opcional. | `201`, `400`, `500` |
-| `PUT` | `/api/productos/:id` | Reemplaza los datos de un producto. Requiere `nombre`, `precio` y `stock`. | `200`, `400`, `404`, `500` |
+| `GET` | `/api/productos/:id` | Obtiene un producto por identificador. | `200`, `400`, `404`, `500` |
+| `POST` | `/api/productos` | Crea un producto. | `201`, `400`, `500` |
+| `PUT` | `/api/productos/:id` | Actualiza los datos de un producto. | `200`, `400`, `404`, `500` |
 | `DELETE` | `/api/productos/:id` | Elimina un producto. | `200`, `400`, `404`, `500` |
 
-Ejemplo de cuerpo JSON para `POST` y `PUT`:
+Las respuestas se envían en JSON. Las solicitudes `POST` y `PUT` reciben un cuerpo JSON con este formato:
 
 ```json
 {
@@ -61,27 +101,14 @@ Ejemplo de cuerpo JSON para `POST` y `PUT`:
 }
 ```
 
-`nombre` debe ser texto de hasta 100 caracteres, `precio` un número mayor o igual a cero, `stock` un entero mayor o igual a cero y `descripcion` texto de hasta 255 caracteres. Los errores se devuelven como JSON con la propiedad `error`; no se envían detalles internos al cliente.
+`nombre`, `precio` y `stock` son obligatorios. El nombre admite hasta 100 caracteres, la descripción hasta 255; el precio debe ser un número mayor o igual a cero y el stock un entero mayor o igual a cero. Los errores tienen el formato `{ "error": "mensaje" }`.
 
-## Pruebas que debes realizar
+## Pruebas automatizadas
 
-Con el servidor iniciado y MySQL conectado, usa Postman, Insomnia o Thunder Client para probar:
+El proyecto incluye pruebas de las rutas, validaciones y respuestas HTTP. Se ejecutan con:
 
-1. `GET http://localhost:3000/api/productos` — debe devolver `200` y un arreglo JSON.
-2. `POST http://localhost:3000/api/productos` — envía el ejemplo de JSON anterior; debe devolver `201`.
-3. `GET http://localhost:3000/api/productos/1` — debe devolver `200` si existe ese producto.
-4. `PUT http://localhost:3000/api/productos/1` — envía un cuerpo JSON completo; debe devolver `200`.
-5. `DELETE http://localhost:3000/api/productos/3` — debe devolver `200` si existe ese producto.
-6. `GET http://localhost:3000/api/productos/9999` — debe devolver `404` si ese ID no existe.
-7. `POST http://localhost:3000/api/productos` con `{}` — debe devolver `400`.
-8. Para verificar `500`, detén MySQL temporalmente y repite el GET de la lista; luego vuelve a iniciar MySQL.
+```bash
+npm test
+```
 
-Para `POST` y `PUT`, selecciona el cuerpo **raw / JSON** para que el cliente envíe `Content-Type: application/json`. Guarda las capturas solicitadas por la guía: árbol y archivos de código, respuestas exitosas y errores.
-
-## Pasos finales a tu cargo
-
-- [ ] Ejecutar la importación de `database.sql` en phpMyAdmin y confirmar que existan `db_lab10` y la tabla `productos`.
-- [ ] Crear `.env` desde `.env.example` y poner las credenciales locales correctas.
-- [ ] Ejecutar `npm install` y `npm run dev`.
-- [ ] Completar las solicitudes y capturas de evidencia en tu cliente REST.
-- [ ] Si debes entregar el repositorio en GitHub: inicializar Git, revisar que `.env` no se incluya, y subir el proyecto. `.gitignore` ya excluye `.env` y `node_modules/`.
+Estas pruebas simulan las consultas a la base de datos; para usar la API con datos reales se requiere que MySQL de XAMPP esté iniciado y que exista la base de datos `db_lab10`.
